@@ -461,7 +461,7 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
-    fetch('/api/auth/me')
+    fetch('/api/auth/me', { credentials: 'include' })
       .then(async (response) => (response.ok ? response.json() : { success: false }))
       .then((result) => {
         if (active && result.success && result.data) setUser(result.data);
@@ -476,7 +476,7 @@ export default function App() {
   }, []);
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => undefined);
     setUser(null);
   };
 
