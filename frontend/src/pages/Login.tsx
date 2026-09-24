@@ -74,6 +74,17 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <p className="text-sm text-slate-400 mt-1">AI-powered decision support for coordinated disaster response.</p>
         </div>
 
+        <button
+          type="button"
+          onClick={() => {
+            setMode((currentMode) => (currentMode === 'login' ? 'register' : 'login'));
+            setError(null);
+          }}
+          className="mb-5 w-full text-center text-sm text-slate-400 hover:text-white transition"
+        >
+          {mode === 'login' ? 'Need an account? Register' : 'Already registered? Sign in'}
+        </button>
+
         <form onSubmit={handleSubmit} className="space-y-5">
           <label className="block">
             <span className="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-2">Username</span>
@@ -151,16 +162,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           </button>
         </form>
 
-        <button
-          type="button"
-          onClick={() => {
-            setMode((currentMode) => (currentMode === 'login' ? 'register' : 'login'));
-            setError(null);
-          }}
-          className="mt-5 w-full text-center text-sm text-slate-400 hover:text-white transition"
-        >
-          {mode === 'login' ? 'Need an account? Register' : 'Already registered? Sign in'}
-        </button>
       </section>
     </main>
   );
