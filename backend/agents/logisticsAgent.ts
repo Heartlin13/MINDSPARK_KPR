@@ -16,6 +16,7 @@ For EVERY zone, determine:
 - reason: logistics justification
 
 Crucial Operational Protocol:
+- Use floodStatus, floodRisk, floodWaterSpread, floodConfidence, and floodDataSource from each zone as one input to evacuation and resource prioritization when present. Treat satellite-derived values as observed evidence, not a prediction of future flooding; treat simulation values as SIMULATED DATA.
 - For Zone A evacuation ahead of the toxic chemical plume, request specific vehicle "AMB-02" for elderly assisted transport and "RV-01" for debris clearance on Road Alpha.
 - For Dam Failure (Zone C), request swift-water rescue craft "RB-01", "RB-02", and assign evacuations to high-ground "Shelter Central".
 - Do NOT directly allocate resources; provide structured recommendations and requests only.
@@ -233,7 +234,7 @@ export async function runLogisticsAgent(
   resources: ResourceUnit[],
   isDamFailure: boolean
 ): Promise<{ output: LogisticsOutput; mode: 'AI_GEMINI' | 'SIMULATION_FALLBACK' }> {
-  const prompt = `Current Disaster Zones:\n${JSON.stringify(zones, null, 2)}\n\nAvailable Resource Pool:\n${JSON.stringify(
+  const prompt = `Current Disaster Zones (including any satellite-derived flood observations or explicitly labeled simulation fallback fields):\n${JSON.stringify(zones, null, 2)}\n\nAvailable Resource Pool:\n${JSON.stringify(
     resources.map((r) => ({ id: r.id, name: r.name, total: r.total, available: r.available })),
     null,
     2

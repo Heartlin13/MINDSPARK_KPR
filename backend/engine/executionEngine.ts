@@ -35,12 +35,16 @@ import { ConflictEngine } from './conflictEngine';
 import { ConstraintValidator } from './constraintValidator';
 import { DisasterSimulator } from './disasterSimulator';
 import { ResourceManager } from './resourceManager';
+import { FloodAnalysisService, FloodAssessment } from '../services/floodAnalysisService';
+import { SatelliteService } from '../services/satelliteService';
 
 export class ExecutionEngine {
   private simulator: DisasterSimulator;
   private resourceManager: ResourceManager;
   private conflictEngine: ConflictEngine;
   private constraintValidator: ConstraintValidator;
+  private satelliteService: SatelliteService;
+  private floodAnalysisService: FloodAnalysisService;
   private state: SystemExecutionState;
   private messageCounter = 1;
   private logCounter = 1;
@@ -50,6 +54,8 @@ export class ExecutionEngine {
     this.resourceManager = new ResourceManager();
     this.conflictEngine = new ConflictEngine();
     this.constraintValidator = new ConstraintValidator();
+    this.satelliteService = new SatelliteService();
+    this.floodAnalysisService = new FloodAnalysisService();
 
     this.state = this.buildInitialState();
   }
@@ -57,6 +63,10 @@ export class ExecutionEngine {
   private buildInitialState(): SystemExecutionState {
     const zones = this.simulator.getZones();
     const resources = this.resourceManager.getAllResources();
+    const initialFloodAssessment = this.floodAnalysisService.analyze(
+      this.satelliteService.getSimulatedResult(zones),
+      zones
+    );
 
     return {
       scenarioTitle: 'Scenario Alpha: Regional Seismic Hazard & Hazardous Leak',
@@ -64,7 +74,7 @@ export class ExecutionEngine {
       executionMode: 'SIMULATION_FALLBACK',
       stepIndex: 0,
       isRunning: false,
-      zones,
+      zones: initialFloodAssessment.zones,
       resources,
       agentStatuses: {
         'Medical Agent': {
@@ -146,7 +156,29 @@ export class ExecutionEngine {
       incidentMemory: JSON.parse(JSON.stringify(INITIAL_INCIDENT_MEMORY)),
       causeChain: JSON.parse(JSON.stringify(INITIAL_CAUSE_CHAIN)),
       auditTrail: JSON.parse(JSON.stringify(INITIAL_AUDIT_TRAIL)),
+      satelliteMonitoring: initialFloodAssessment.monitoring,
     };
+  }
+
+  private async refreshSatelliteAssessment(): Promise<FloodAssessment> {
+    const baseZones = this.simulator.getZones();
+    const satelliteResult = await this.satelliteService.getFloodObservations(baseZones);
+    const assessment = this.floodAnalysisService.analyze(satelliteResult, baseZones);
+    this.state.satelliteMonitoring = assessment.monitoring;
+    this.state.zones = assessment.zones;
+    this.addLog(
+      assessment.monitoring.source === 'satellite' ? 'INFO' : 'WARN',
+      'SatelliteService',
+      assessment.monitoring.source === 'satellite'
+        ? 'Satellite-derived flood observations refreshed for agent analysis.'
+        : 'Satellite data unavailable; clearly labeled synthetic flood indications retained.'
+    );
+    return assessment;
+  }
+
+  public async getSatelliteMonitoring(): Promise<SystemExecutionState['satelliteMonitoring']> {
+    const assessment = await this.refreshSatelliteAssessment();
+    return assessment.monitoring;
   }
 
   public getState(): SystemExecutionState {
@@ -282,6 +314,7 @@ export class ExecutionEngine {
    * Run an individual agent on demand (Medical, Logistics, Communication, or Coordinator)
    */
   public async runSingleAgent(agentRole: AgentRole): Promise<{ state: SystemExecutionState; agentOutput: any }> {
+    await this.refreshSatelliteAssessment();
     const isDamFailure = this.state.activeEmergencyId === 'DAM_FAILURE_ZONE_C';
     this.state.agentStatuses[agentRole].status = 'ANALYZING';
     this.state.agentStatuses[agentRole].currentTask = `Running independent zone evaluation across all sectors`;
@@ -445,7 +478,7 @@ export class ExecutionEngine {
 
     try {
       // STEP 1: Load current disaster scenario
-      this.state.zones = this.simulator.getZones();
+      await this.refreshSatelliteAssessment();
       this.state.resources = this.resourceManager.getAllResources();
 
       // STEP 2: Run Medical Agent

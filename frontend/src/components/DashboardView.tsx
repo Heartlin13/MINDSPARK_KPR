@@ -24,6 +24,7 @@ import {
   AgentRole, 
   DisasterSeverityLevel, 
   GeminiStatusInfo, 
+  SatelliteMonitoring,
   SystemExecutionState,
   DisasterZone
 } from '../types/disaster';
@@ -32,6 +33,7 @@ import { TabType } from './Sidebar';
 interface DashboardViewProps {
   state: SystemExecutionState | null;
   geminiStatus: GeminiStatusInfo | null;
+  satelliteMonitoring: SatelliteMonitoring | null;
   onNavigateTab: (tab: TabType) => void;
   onRunCoordinatedResponse: () => void;
   onTriggerEmergency?: () => void;
@@ -41,6 +43,7 @@ interface DashboardViewProps {
 export const DashboardView: React.FC<DashboardViewProps> = ({
   state,
   geminiStatus,
+  satelliteMonitoring,
   onNavigateTab,
   onRunCoordinatedResponse,
   onTriggerEmergency,
@@ -79,6 +82,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const totalResources = resources.reduce((acc, r) => acc + (r.total || 0), 0);
   const activeIncidentsCount = isDamFailure ? 2 : 1;
   const isGeminiConnected = geminiStatus?.status === 'CONNECTED';
+  const satelliteZones = satelliteMonitoring?.affectedZones || [];
+  const satelliteStatusLabel = satelliteMonitoring?.status === 'CONNECTED'
+    ? 'Connected'
+    : satelliteMonitoring?.status === 'UNAVAILABLE'
+    ? 'Unavailable'
+    : 'Simulated';
+  const satelliteRisk = satelliteZones.reduce<'LOW' | 'MEDIUM' | 'HIGH'>((highest, zone) => {
+    if (zone.floodRisk === 'HIGH' || highest === 'HIGH') return 'HIGH';
+    if (zone.floodRisk === 'MEDIUM' || highest === 'MEDIUM') return 'MEDIUM';
+    return 'LOW';
+  }, 'LOW');
 
   // Severity visual indicator strictly matching Section 6
   const renderSeverityIndicator = (level?: DisasterSeverityLevel | string) => {
@@ -215,6 +229,43 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {totalAvailableResources} / {totalResources} Units
           </span>
         </div>
+      </div>
+
+      <div className="bg-slate-900 border border-cyan-900/70 rounded-xl p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div>
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider">Satellite Monitoring</h2>
+            <p className="text-xs text-slate-400 mt-1">Flood risk indication from server-side Earth-observation integration</p>
+          </div>
+          <span className={`px-2 py-1 rounded text-[10px] font-mono font-bold border ${
+            satelliteMonitoring?.status === 'CONNECTED'
+              ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+              : satelliteMonitoring?.status === 'UNAVAILABLE'
+              ? 'bg-amber-950 text-amber-300 border-amber-800'
+              : 'bg-slate-950 text-cyan-300 border-cyan-800'
+          }`}>
+            {satelliteStatusLabel}
+          </span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
+          <div>
+            <span className="text-[10px] text-slate-500 uppercase block">Last Observation</span>
+            <span className="text-slate-200 mt-1 block">{satelliteMonitoring?.timestamp ? new Date(satelliteMonitoring.timestamp).toLocaleString() : 'Pending'}</span>
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-500 uppercase block">Affected Zones</span>
+            <span className="text-cyan-300 mt-1 block">{satelliteZones.length ? satelliteZones.map((zone) => zone.zoneId).join(', ') : 'None reported'}</span>
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-500 uppercase block">Flood Risk</span>
+            <span className={`mt-1 block font-bold ${satelliteRisk === 'HIGH' ? 'text-red-400' : satelliteRisk === 'MEDIUM' ? 'text-amber-400' : 'text-emerald-400'}`}>{satelliteRisk}</span>
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-500 uppercase block">Data Source</span>
+            <span className={`mt-1 block font-bold ${satelliteMonitoring?.source === 'satellite' ? 'text-emerald-400' : 'text-cyan-300'}`}>{satelliteMonitoring?.dataLabel || 'SIMULATED DATA'}</span>
+          </div>
+        </div>
+        <p className="text-[11px] text-slate-400">{satelliteMonitoring?.message || 'Satellite monitoring has not returned data yet.'}</p>
       </div>
 
       {/* PIPELINE PROGRESS INDICATOR (SECTION 9) */}

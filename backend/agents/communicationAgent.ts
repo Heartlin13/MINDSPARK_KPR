@@ -14,6 +14,7 @@ For EVERY zone, determine:
 - reason: brief communication rationale
 
 Generate clear public-facing emergency messages.
+- Use floodStatus, floodRisk, floodWaterSpread, floodConfidence, and floodDataSource from each zone as one input to public warnings when present. Describe satellite values as observed evidence and label simulation values as SIMULATED DATA; do not claim exact future flood prediction.
 Do NOT expose internal chain-of-thought or reasoning tokens.
 
 Return ONLY structured JSON conforming to this exact schema:
@@ -127,7 +128,7 @@ export async function runCommunicationAgent(
   resources: ResourceUnit[],
   isDamFailure: boolean
 ): Promise<{ output: CommunicationOutput; mode: 'AI_GEMINI' | 'SIMULATION_FALLBACK' }> {
-  const prompt = `Current Disaster Zones:\n${JSON.stringify(zones, null, 2)}\n\nActive Emergency State: ${
+  const prompt = `Current Disaster Zones (including any satellite-derived flood observations or explicitly labeled simulation fallback fields):\n${JSON.stringify(zones, null, 2)}\n\nActive Emergency State: ${
     isDamFailure ? 'DAM FAILURE ACTIVE IN ZONE C (Catastrophic Flash Flood Surge)' : 'Baseline Seismic and Chemical Plume Incident'
   }\n\nAnalyze all 4 zones. Calculate severity_score (0-100), classify level (NORMAL, MEDIUM, DANGER, CRITICAL), and formulate clear public alerts and safety instructions.`;
 

@@ -19,6 +19,7 @@ For EVERY zone, determine:
 - reason: brief clinical explanation of this zone's assessment
 
 Crucial Operational Protocol:
+- Use floodStatus, floodRisk, floodWaterSpread, floodConfidence, and floodDataSource from each zone as one input to medical prioritization when present. Treat satellite-derived values as observed evidence, not a prediction of future flooding; treat simulation values as SIMULATED DATA.
 - If Zone B has structural collapse with severe casualties, request specific ambulance "AMB-02" and medical team "MED-T1" for Zone B.
 - Do NOT directly allocate resources; provide structured recommendations and requests only.
 
@@ -208,7 +209,7 @@ export async function runMedicalAgent(
   resources: ResourceUnit[],
   isDamFailure: boolean
 ): Promise<{ output: MedicalOutput; mode: 'AI_GEMINI' | 'SIMULATION_FALLBACK' }> {
-  const prompt = `Current Disaster Zones:\n${JSON.stringify(zones, null, 2)}\n\nAvailable Resource Pool:\n${JSON.stringify(
+  const prompt = `Current Disaster Zones (including any satellite-derived flood observations or explicitly labeled simulation fallback fields):\n${JSON.stringify(zones, null, 2)}\n\nAvailable Resource Pool:\n${JSON.stringify(
     resources.map((r) => ({ id: r.id, name: r.name, total: r.total, available: r.available })),
     null,
     2

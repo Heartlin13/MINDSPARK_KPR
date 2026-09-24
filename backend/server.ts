@@ -8,6 +8,7 @@ import { isGeminiConfigured, verifyGeminiConnection, generateAgentResponse } fro
 import { ResourceManager } from './engine/resourceManager';
 import { AgentRole } from '../frontend/src/types/disaster';
 import { globalSystemConfig } from './config/systemConfigManager';
+import { SatelliteService } from './services/satelliteService';
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = Number(process.env.PORT) || 3000;
 const allowedOrigin = process.env.CORS_ORIGIN || process.env.APP_URL;
+const satelliteService = new SatelliteService();
 
 app.use(express.json());
 
@@ -92,6 +94,33 @@ app.get('/api/gemini/status', async (req, res) => {
         model: 'gemini-3.8-flash',
       },
     });
+  }
+});
+
+// Satellite status never exposes provider credentials or raw authorization details.
+app.get('/api/satellite/status', async (req, res) => {
+  try {
+    const status = await satelliteService.getStatus();
+    res.json({ success: true, data: status });
+  } catch (error: any) {
+    res.json({
+      success: true,
+      data: {
+        status: 'UNAVAILABLE',
+        provider: 'Configured satellite provider',
+        message: error?.message || 'Satellite provider is unavailable.',
+        configured: Boolean(process.env.SATELLITE_API_URL && process.env.SATELLITE_API_KEY),
+      },
+    });
+  }
+});
+
+app.get('/api/satellite/observations', async (req, res) => {
+  try {
+    const monitoring = await globalExecutionEngine.getSatelliteMonitoring();
+    res.json({ success: true, data: monitoring });
+  } catch (error: any) {
+    res.status(503).json({ success: false, error: error?.message || 'Satellite observations unavailable.' });
   }
 });
 
@@ -225,6 +254,8 @@ app.get('/api/architecture', (req, res) => {
         },
       ],
       deterministicEngines: [
+        { name: 'Satellite Data Provider', role: 'Server-side Earth-observation adapter with explicit simulation fallback.' },
+        { name: 'Flood Analysis Service', role: 'Deterministic conversion of observed water spread into affected-zone flood risk indications.' },
         { name: 'Disaster Simulator', role: 'Maintains ground-truth telemetry and scenario injections.' },
         { name: 'Agent Message Bus', role: 'Decoupled event broker managing agent communication.' },
         { name: 'Conflict Engine', role: 'Algorithmic detection of mutual asset contention.' },

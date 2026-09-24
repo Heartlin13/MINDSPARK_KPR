@@ -855,4 +855,14 @@ export const INITIAL_DEFAULT_STATE: SystemExecutionState = {
   incidentMemory: INITIAL_INCIDENT_MEMORY,
   causeChain: INITIAL_CAUSE_CHAIN,
   auditTrail: INITIAL_AUDIT_TRAIL,
+  satelliteMonitoring: {
+    status: 'SIMULATED_FALLBACK',
+    source: 'simulation',
+    dataLabel: 'SIMULATED DATA',
+    provider: 'Disaster Simulator',
+    message: 'Synthetic disaster simulation is active because satellite data is unavailable.',
+    timestamp: new Date().toISOString(),
+    observations: [],
+    affectedZones: [],
+  },
 };

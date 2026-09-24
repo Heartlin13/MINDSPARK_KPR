@@ -18,6 +18,14 @@ export interface Zone {
   coordinates: { x: number; y: number };
   notes: string;
   lastUpdated?: string;
+  floodStatus?: 'low' | 'medium' | 'high';
+  floodRisk?: 'LOW' | 'MEDIUM' | 'HIGH';
+  floodRiskScore?: number;
+  floodWaterSpread?: number;
+  floodConfidence?: number;
+  floodDataSource?: 'satellite' | 'simulation';
+  floodObservationTimestamp?: string;
+  floodEvidence?: string;
 }
 
 export type DisasterZone = Zone;
@@ -251,6 +259,38 @@ export interface GeminiStatusInfo {
   model: string;
 }
 
+export interface SatelliteObservation {
+  zoneId: string;
+  floodStatus: 'low' | 'medium' | 'high';
+  waterSpread: number;
+  confidence: number;
+  timestamp: string;
+  evidence?: string;
+}
+
+export interface SatelliteAffectedZone {
+  zoneId: string;
+  floodStatus: 'low' | 'medium' | 'high';
+  floodRisk: 'LOW' | 'MEDIUM' | 'HIGH';
+  floodRiskScore: number;
+  waterSpread: number;
+  confidence: number;
+  source: 'satellite' | 'simulation';
+  observationTimestamp: string;
+  evidence: string;
+}
+
+export interface SatelliteMonitoring {
+  status: 'CONNECTED' | 'UNAVAILABLE' | 'SIMULATED_FALLBACK';
+  source: 'satellite' | 'simulation';
+  dataLabel: 'REAL SATELLITE DATA' | 'SIMULATED DATA';
+  provider: string;
+  message: string;
+  timestamp: string;
+  observations: SatelliteObservation[];
+  affectedZones: SatelliteAffectedZone[];
+}
+
 export type RescuePassportStage =
   | 'PLAN'
   | 'APPROVAL'
@@ -442,6 +482,7 @@ export interface SystemExecutionState {
   incidentMemory: IncidentMemoryEntry[];
   causeChain: CauseChainNode[];
   auditTrail: AuditTrailEntry[];
+  satelliteMonitoring: SatelliteMonitoring;
 }
 
 export interface SystemLogEntry {

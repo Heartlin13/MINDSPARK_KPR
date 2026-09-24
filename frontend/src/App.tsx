@@ -16,7 +16,7 @@ import { ResponseHistoryView } from './components/ResponseHistoryView';
 import { ArchitectureView } from './components/ArchitectureView';
 import { ReportsView } from './components/ReportsView';
 import { SettingsView } from './components/SettingsView';
-import { AgentRole, GeminiStatusInfo, SystemExecutionState } from './types/disaster';
+import { AgentRole, GeminiStatusInfo, SatelliteMonitoring, SystemExecutionState } from './types/disaster';
 import { INITIAL_DEFAULT_STATE } from './utils/defaultState';
 import { CheckCircle2, AlertTriangle, X } from 'lucide-react';
 
@@ -31,6 +31,7 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
   const [state, setState] = useState<SystemExecutionState>(INITIAL_DEFAULT_STATE);
   const [geminiStatus, setGeminiStatus] = useState<GeminiStatusInfo | null>(null);
+  const [satelliteMonitoring, setSatelliteMonitoring] = useState<SatelliteMonitoring>(INITIAL_DEFAULT_STATE.satelliteMonitoring);
   const [selectedAgent, setSelectedAgent] = useState<AgentRole>('Medical Agent');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -62,6 +63,7 @@ export default function App() {
   const MAX_STATE_INTERVAL_MS = 32000;
   const BASE_GEMINI_INTERVAL_MS = 15000;
   const MAX_GEMINI_INTERVAL_MS = 60000;
+  const SATELLITE_INTERVAL_MS = 60000;
 
   const stateDelayRef = React.useRef<number>(BASE_STATE_INTERVAL_MS);
   const geminiDelayRef = React.useRef<number>(BASE_GEMINI_INTERVAL_MS);
@@ -121,10 +123,26 @@ export default function App() {
     }
   }, []);
 
+  const fetchSatelliteObservations = useCallback(async () => {
+    try {
+      const res = await fetch('/api/satellite/observations');
+      if (!res.ok) return false;
+      const json = await res.json();
+      if (json.success && json.data) {
+        setSatelliteMonitoring(json.data);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }, []);
+
   // Resilient Exponential Backoff Polling Loops
   useEffect(() => {
     let stateTimeoutId: NodeJS.Timeout;
     let geminiTimeoutId: NodeJS.Timeout;
+    let satelliteTimeoutId: NodeJS.Timeout;
     let isMounted = true;
 
     const scheduleStatePoll = () => {
@@ -143,20 +161,31 @@ export default function App() {
       }, geminiDelayRef.current);
     };
 
+    const scheduleSatellitePoll = () => {
+      satelliteTimeoutId = setTimeout(async () => {
+        if (!isMounted) return;
+        await fetchSatelliteObservations();
+        if (isMounted) scheduleSatellitePoll();
+      }, SATELLITE_INTERVAL_MS);
+    };
+
     // Initial triggers
     fetchState();
     fetchGeminiStatus();
+    fetchSatelliteObservations();
 
     // Start recursive scheduled backoff loops
     scheduleStatePoll();
     scheduleGeminiPoll();
+    scheduleSatellitePoll();
 
     return () => {
       isMounted = false;
       clearTimeout(stateTimeoutId);
       clearTimeout(geminiTimeoutId);
+      clearTimeout(satelliteTimeoutId);
     };
-  }, [fetchState, fetchGeminiStatus]);
+  }, [fetchState, fetchGeminiStatus, fetchSatelliteObservations]);
 
   const handleManualReconnect = useCallback(() => {
     stateDelayRef.current = BASE_STATE_INTERVAL_MS;
@@ -294,6 +323,7 @@ export default function App() {
             <DashboardView
               state={state}
               geminiStatus={geminiStatus}
+              satelliteMonitoring={satelliteMonitoring}
               onNavigateTab={setCurrentTab}
               onRunCoordinatedResponse={handleRunCoordinatedResponse}
               isLoading={isLoading}
