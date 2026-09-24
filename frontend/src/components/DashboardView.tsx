@@ -51,6 +51,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   const [currentTime, setCurrentTime] = useState<string>('');
   const [showValidationDetails, setShowValidationDetails] = useState<boolean>(false);
+  const [selectedZone, setSelectedZone] = useState<string>('Zone C');
 
   useEffect(() => {
     const update = () => setCurrentTime(new Date().toTimeString().split(' ')[0]);
@@ -93,6 +94,80 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     if (zone.floodRisk === 'MEDIUM' || highest === 'MEDIUM') return 'MEDIUM';
     return 'LOW';
   }, 'LOW');
+
+  const floodZoneProfiles = [
+    {
+      zoneId: 'Zone A',
+      status: 'SAFE',
+      riskLevel: 'Low',
+      waterSpread: 12,
+      peopleAtRisk: 120,
+      waterLevel: 'Normal',
+      rainfall: 'Low',
+      lastUpdated: new Date().toISOString(),
+      dataSource: 'SIMULATED SATELLITE DATA',
+    },
+    {
+      zoneId: 'Zone B',
+      status: 'MEDIUM',
+      riskLevel: 'Moderate',
+      waterSpread: 48,
+      peopleAtRisk: 450,
+      waterLevel: 'Rising',
+      rainfall: 'Moderate',
+      lastUpdated: new Date().toISOString(),
+      dataSource: 'SIMULATED SATELLITE DATA',
+    },
+    {
+      zoneId: 'Zone C',
+      status: 'DANGER',
+      riskLevel: 'High',
+      waterSpread: 82,
+      peopleAtRisk: 850,
+      waterLevel: 'Critical',
+      rainfall: 'Heavy',
+      lastUpdated: new Date().toISOString(),
+      dataSource: 'SIMULATED SATELLITE DATA',
+    },
+    {
+      zoneId: 'Zone D',
+      status: 'SAFE',
+      riskLevel: 'Low',
+      waterSpread: 18,
+      peopleAtRisk: 150,
+      waterLevel: 'Normal',
+      rainfall: 'Low',
+      lastUpdated: new Date().toISOString(),
+      dataSource: 'SIMULATED SATELLITE DATA',
+    },
+  ];
+
+  const zoneFloodTelemetry = floodZoneProfiles.map((profile) => {
+    const observedZone = satelliteMonitoring?.affectedZones?.find((entry) => entry.zoneId === profile.zoneId);
+    if (!observedZone) {
+      return profile;
+    }
+
+    const status = observedZone.floodRisk === 'HIGH' ? 'DANGER' : observedZone.floodRisk === 'MEDIUM' ? 'MEDIUM' : 'SAFE';
+    return {
+      ...profile,
+      status,
+      riskLevel: status === 'DANGER' ? 'High' : status === 'MEDIUM' ? 'Moderate' : 'Low',
+      waterSpread: observedZone.waterSpread || profile.waterSpread,
+      peopleAtRisk: Math.max(profile.peopleAtRisk, Math.round(observedZone.waterSpread * 12)),
+      waterLevel: status === 'DANGER' ? 'Critical' : status === 'MEDIUM' ? 'Rising' : 'Normal',
+      rainfall: status === 'DANGER' ? 'Heavy' : status === 'MEDIUM' ? 'Moderate' : 'Low',
+      lastUpdated: observedZone.observationTimestamp || profile.lastUpdated,
+      dataSource: 'SIMULATED SATELLITE DATA',
+    };
+  });
+
+  const activeFloodZone = zoneFloodTelemetry.find((zone) => zone.zoneId === selectedZone) || zoneFloodTelemetry[0];
+  const zoneStatusClasses = {
+    SAFE: 'bg-emerald-950 text-emerald-300 border border-emerald-800',
+    MEDIUM: 'bg-amber-950 text-amber-300 border border-amber-800',
+    DANGER: 'bg-red-950 text-red-300 border border-red-800',
+  };
 
   // Severity visual indicator strictly matching Section 6
   const renderSeverityIndicator = (level?: DisasterSeverityLevel | string) => {
@@ -234,8 +309,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="bg-slate-900 border border-cyan-900/70 rounded-xl p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
           <div>
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider">Satellite Monitoring</h2>
-            <p className="text-xs text-slate-400 mt-1">Flood risk indication from server-side Earth-observation integration</p>
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider">Satellite Flood Monitoring</h2>
+            <p className="text-xs text-slate-400 mt-1">Zone-based flood risk review for the current simulated disaster scenario</p>
           </div>
           <span className={`px-2 py-1 rounded text-[10px] font-mono font-bold border ${
             satelliteMonitoring?.status === 'CONNECTED'
@@ -244,28 +319,122 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               ? 'bg-amber-950 text-amber-300 border-amber-800'
               : 'bg-slate-950 text-cyan-300 border-cyan-800'
           }`}>
-            {satelliteStatusLabel}
+            SIMULATED SATELLITE DATA
           </span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
-          <div>
-            <span className="text-[10px] text-slate-500 uppercase block">Last Observation</span>
-            <span className="text-slate-200 mt-1 block">{satelliteMonitoring?.timestamp ? new Date(satelliteMonitoring.timestamp).toLocaleString() : 'Pending'}</span>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {zoneFloodTelemetry.map((zone) => (
+            <button
+              key={zone.zoneId}
+              type="button"
+              onClick={() => setSelectedZone(zone.zoneId)}
+              className={`rounded-xl border p-3 text-left transition ${
+                selectedZone === zone.zoneId
+                  ? 'border-cyan-500 bg-slate-800 shadow-[0_0_0_1px_rgba(34,211,238,0.3)]'
+                  : 'border-slate-700 bg-slate-950 hover:border-slate-500'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-bold text-slate-200 uppercase tracking-wider">{zone.zoneId}</span>
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  zone.status === 'SAFE'
+                    ? 'bg-emerald-950 text-emerald-300'
+                    : zone.status === 'MEDIUM'
+                    ? 'bg-amber-950 text-amber-300'
+                    : 'bg-red-950 text-red-300'
+                }`}>
+                  {zone.status}
+                </span>
+              </div>
+              <div className="mt-2 text-[10px] text-slate-400 uppercase">Risk</div>
+              <div className="text-sm font-bold text-white">{zone.riskLevel}</div>
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-[1.4fr_0.8fr] gap-4">
+          <div className="rounded-xl border border-slate-700 bg-slate-950 p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="text-[10px] uppercase text-slate-400">Selected Zone</div>
+                <h3 className="mt-1 text-xl font-bold text-white">{activeFloodZone.zoneId}</h3>
+              </div>
+              <span className={`inline-flex self-start items-center px-2.5 py-1 rounded text-[10px] font-mono font-bold ${zoneStatusClasses[activeFloodZone.status as keyof typeof zoneStatusClasses]}`}>
+                {activeFloodZone.status}
+              </span>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+              <div className="rounded-lg border border-slate-800 bg-slate-900 p-3">
+                <span className="text-[10px] text-slate-500 uppercase block">Risk Level</span>
+                <span className="mt-1 block text-base font-bold text-white">{activeFloodZone.riskLevel}</span>
+              </div>
+              <div className="rounded-lg border border-slate-800 bg-slate-900 p-3">
+                <span className="text-[10px] text-slate-500 uppercase block">Water Spread</span>
+                <span className="mt-1 block text-base font-bold text-cyan-300">{activeFloodZone.waterSpread}%</span>
+              </div>
+              <div className="rounded-lg border border-slate-800 bg-slate-900 p-3">
+                <span className="text-[10px] text-slate-500 uppercase block">People at Risk</span>
+                <span className="mt-1 block text-base font-bold text-amber-300">{activeFloodZone.peopleAtRisk.toLocaleString()}</span>
+              </div>
+              <div className="rounded-lg border border-slate-800 bg-slate-900 p-3">
+                <span className="text-[10px] text-slate-500 uppercase block">Water Level</span>
+                <span className="mt-1 block text-base font-bold text-white">{activeFloodZone.waterLevel}</span>
+              </div>
+              <div className="rounded-lg border border-slate-800 bg-slate-900 p-3">
+                <span className="text-[10px] text-slate-500 uppercase block">Rainfall</span>
+                <span className="mt-1 block text-base font-bold text-white">{activeFloodZone.rainfall}</span>
+              </div>
+              <div className="rounded-lg border border-slate-800 bg-slate-900 p-3">
+                <span className="text-[10px] text-slate-500 uppercase block">Last Updated</span>
+                <span className="mt-1 block text-base font-bold text-white">{new Date(activeFloodZone.lastUpdated).toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-[11px] font-mono text-slate-300">
+              <span className="text-slate-400 uppercase">Data Source</span>
+              <span className="font-bold text-cyan-300">{activeFloodZone.dataSource}</span>
+            </div>
+
+            {activeFloodZone.status === 'DANGER' && (
+              <div className="mt-4 flex items-center gap-2 rounded-lg border border-red-800 bg-red-950/50 px-3 py-2 text-[11px] font-mono font-bold text-red-200">
+                <span className="inline-block h-2 w-2 rounded-full bg-red-400" />
+                High Priority Zone
+              </div>
+            )}
           </div>
-          <div>
-            <span className="text-[10px] text-slate-500 uppercase block">Affected Zones</span>
-            <span className="text-cyan-300 mt-1 block">{satelliteZones.length ? satelliteZones.map((zone) => zone.zoneId).join(', ') : 'None reported'}</span>
-          </div>
-          <div>
-            <span className="text-[10px] text-slate-500 uppercase block">Flood Risk</span>
-            <span className={`mt-1 block font-bold ${satelliteRisk === 'HIGH' ? 'text-red-400' : satelliteRisk === 'MEDIUM' ? 'text-amber-400' : 'text-emerald-400'}`}>{satelliteRisk}</span>
-          </div>
-          <div>
-            <span className="text-[10px] text-slate-500 uppercase block">Data Source</span>
-            <span className={`mt-1 block font-bold ${satelliteMonitoring?.source === 'satellite' ? 'text-emerald-400' : 'text-cyan-300'}`}>{satelliteMonitoring?.dataLabel || 'SIMULATED DATA'}</span>
+
+          <div className="rounded-xl border border-slate-700 bg-slate-950 p-4">
+            <div className="text-[10px] uppercase text-slate-400">Response System</div>
+            <div className="mt-3 space-y-2 text-xs font-mono text-slate-300">
+              <div className="rounded-lg border border-slate-800 bg-slate-900 p-2">
+                <div className="font-bold text-white">Medical Agent</div>
+                <div className="mt-1 text-slate-400">{activeFloodZone.status === 'DANGER' ? 'Medical priority elevated for emergent triage and rescue.' : 'Routine monitoring of at-risk patients.'}</div>
+              </div>
+              <div className="rounded-lg border border-slate-800 bg-slate-900 p-2">
+                <div className="font-bold text-white">Logistics Agent</div>
+                <div className="mt-1 text-slate-400">{activeFloodZone.status === 'DANGER' ? 'Resource staging and evacuation routing prep for the zone.' : 'Supply planning remains on standard watch.'}</div>
+              </div>
+              <div className="rounded-lg border border-slate-800 bg-slate-900 p-2">
+                <div className="font-bold text-white">Communication Agent</div>
+                <div className="mt-1 text-slate-400">{activeFloodZone.status === 'DANGER' ? 'Warning and evacuation message template activated for the zone.' : 'Public advisory remains monitored and limited.'}</div>
+              </div>
+              <div className="rounded-lg border border-slate-800 bg-slate-900 p-2">
+                <div className="font-bold text-white">Coordinator</div>
+                <div className="mt-1 text-slate-400">{activeFloodZone.status === 'DANGER' ? 'Response plan escalated and coordinated with all agents.' : 'Current plan remains stable and reviewed.'}</div>
+              </div>
+            </div>
           </div>
         </div>
-        <p className="text-[11px] text-slate-400">{satelliteMonitoring?.message || 'Satellite monitoring has not returned data yet.'}</p>
+
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-[11px] font-mono text-slate-300">
+          <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />SAFE = Low flood risk</span>
+          <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-amber-400" />MEDIUM = Moderate flood risk</span>
+          <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-red-400" />DANGER = High flood risk</span>
+        </div>
+
+        <p className="text-[11px] text-slate-400">{satelliteMonitoring?.message || 'Satellite detection feed is currently running in synthetic mode. Flood-risk values are representative only and are not real satellite observations.'}</p>
       </div>
 
       {/* PIPELINE PROGRESS INDICATOR (SECTION 9) */}
