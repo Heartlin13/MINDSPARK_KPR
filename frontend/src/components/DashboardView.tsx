@@ -95,72 +95,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return 'LOW';
   }, 'LOW');
 
-  const floodZoneProfiles = [
-    {
-      zoneId: 'Zone A',
-      status: 'SAFE',
-      riskLevel: 'Low',
-      waterSpread: 12,
-      peopleAtRisk: 120,
-      waterLevel: 'Normal',
-      rainfall: 'Low',
-      lastUpdated: new Date().toISOString(),
-      dataSource: 'SIMULATED SATELLITE DATA',
-    },
-    {
-      zoneId: 'Zone B',
-      status: 'MEDIUM',
-      riskLevel: 'Moderate',
-      waterSpread: 48,
-      peopleAtRisk: 450,
-      waterLevel: 'Rising',
-      rainfall: 'Moderate',
-      lastUpdated: new Date().toISOString(),
-      dataSource: 'SIMULATED SATELLITE DATA',
-    },
-    {
-      zoneId: 'Zone C',
-      status: 'DANGER',
-      riskLevel: 'High',
-      waterSpread: 82,
-      peopleAtRisk: 850,
-      waterLevel: 'Critical',
-      rainfall: 'Heavy',
-      lastUpdated: new Date().toISOString(),
-      dataSource: 'SIMULATED SATELLITE DATA',
-    },
-    {
-      zoneId: 'Zone D',
-      status: 'SAFE',
-      riskLevel: 'Low',
-      waterSpread: 18,
-      peopleAtRisk: 150,
-      waterLevel: 'Normal',
-      rainfall: 'Low',
-      lastUpdated: new Date().toISOString(),
-      dataSource: 'SIMULATED SATELLITE DATA',
-    },
-  ];
+  const floodZoneProfiles = (zones.length > 0 ? zones : [
+    { id: 'Zone A', name: 'Zone A', peopleAtRisk: 0, emergencyType: '', lastUpdated: new Date().toISOString() },
+    { id: 'Zone B', name: 'Zone B', peopleAtRisk: 0, emergencyType: '', lastUpdated: new Date().toISOString() },
+    { id: 'Zone C', name: 'Zone C', peopleAtRisk: 0, emergencyType: '', lastUpdated: new Date().toISOString() },
+    { id: 'Zone D', name: 'Zone D', peopleAtRisk: 0, emergencyType: '', lastUpdated: new Date().toISOString() },
+  ] as DisasterZone[]).map((zone, index) => {
+    const observedZone = satelliteMonitoring?.affectedZones?.find((entry) => entry.zoneId === zone.id);
+    const baseWaterSpread = observedZone?.waterSpread ?? (zone.id === 'Zone C' ? 38 : 0);
+    const status = observedZone
+      ? observedZone.floodRisk === 'HIGH'
+        ? 'DANGER'
+        : observedZone.floodRisk === 'MEDIUM'
+        ? 'MEDIUM'
+        : 'SAFE'
+      : zone.id === 'Zone C'
+      ? 'MEDIUM'
+      : 'SAFE';
 
-  const zoneFloodTelemetry = floodZoneProfiles.map((profile) => {
-    const observedZone = satelliteMonitoring?.affectedZones?.find((entry) => entry.zoneId === profile.zoneId);
-    if (!observedZone) {
-      return profile;
-    }
-
-    const status = observedZone.floodRisk === 'HIGH' ? 'DANGER' : observedZone.floodRisk === 'MEDIUM' ? 'MEDIUM' : 'SAFE';
     return {
-      ...profile,
+      zoneId: zone.id,
       status,
       riskLevel: status === 'DANGER' ? 'High' : status === 'MEDIUM' ? 'Moderate' : 'Low',
-      waterSpread: observedZone.waterSpread || profile.waterSpread,
-      peopleAtRisk: Math.max(profile.peopleAtRisk, Math.round(observedZone.waterSpread * 12)),
+      waterSpread: baseWaterSpread,
+      peopleAtRisk: Math.max(zone.peopleAtRisk || 0, Math.round(baseWaterSpread * 12), observedZone ? Math.round(observedZone.waterSpread * 12) : 0),
       waterLevel: status === 'DANGER' ? 'Critical' : status === 'MEDIUM' ? 'Rising' : 'Normal',
       rainfall: status === 'DANGER' ? 'Heavy' : status === 'MEDIUM' ? 'Moderate' : 'Low',
-      lastUpdated: observedZone.observationTimestamp || profile.lastUpdated,
-      dataSource: 'SIMULATED SATELLITE DATA',
+      lastUpdated: observedZone?.observationTimestamp || zone.lastUpdated || new Date().toISOString(),
+      dataSource: satelliteMonitoring?.dataLabel || 'SIMULATED DATA',
+      displayIndex: index,
     };
   });
+
+  const zoneFloodTelemetry = floodZoneProfiles.sort((a, b) => a.displayIndex - b.displayIndex);
 
   const activeFloodZone = zoneFloodTelemetry.find((zone) => zone.zoneId === selectedZone) || zoneFloodTelemetry[0];
   const zoneStatusClasses = {
@@ -312,15 +279,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <h2 className="text-sm font-bold text-white uppercase tracking-wider">Satellite Flood Monitoring</h2>
             <p className="text-xs text-slate-400 mt-1">Zone-based flood risk review for the current simulated disaster scenario</p>
           </div>
-          <span className={`px-2 py-1 rounded text-[10px] font-mono font-bold border ${
-            satelliteMonitoring?.status === 'CONNECTED'
-              ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
-              : satelliteMonitoring?.status === 'UNAVAILABLE'
-              ? 'bg-amber-950 text-amber-300 border-amber-800'
-              : 'bg-slate-950 text-cyan-300 border-cyan-800'
-          }`}>
-            SIMULATED SATELLITE DATA
-          </span>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
