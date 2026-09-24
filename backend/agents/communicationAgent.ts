@@ -1,4 +1,4 @@
-import { CommunicationOutput, ResourceUnit, Zone, ZoneSeverityAnalysis } from '../../src/types/disaster';
+import { CommunicationOutput, ResourceUnit, Zone, ZoneSeverityAnalysis } from '../../frontend/src/types/disaster';
 import { generateAgentResponse } from '../geminiClient';
 
 const COMMUNICATION_SYSTEM_INSTRUCTION = `You are the Communication Agent of ResQ-Mind.

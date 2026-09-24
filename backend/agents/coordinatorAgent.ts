@@ -7,7 +7,7 @@ import {
   MedicalOutput,
   ResourceUnit,
   Zone,
-} from '../../src/types/disaster';
+} from '../../frontend/src/types/disaster';
 import { generateAgentResponse } from '../geminiClient';
 
 const COORDINATOR_SYSTEM_INSTRUCTION = `You are the Coordinator Agent of ResQ-Mind.

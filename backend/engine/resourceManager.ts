@@ -1,4 +1,4 @@
-import { ResourceUnit, ResourceAllocationRecord } from '../../src/types/disaster';
+import { ResourceUnit, ResourceAllocationRecord } from '../../frontend/src/types/disaster';
 import { getInitialResources } from './disasterSimulator';
 
 export class ResourceManager {

@@ -1,4 +1,4 @@
-import { Zone, ResourceUnit } from '../../src/types/disaster';
+import { Zone, ResourceUnit } from '../../frontend/src/types/disaster';
 
 export function getInitialZones(): Zone[] {
   return [

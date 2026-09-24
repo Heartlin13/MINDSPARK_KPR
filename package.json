@@ -4,10 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
-    "build": "vite build",
-    "preview": "vite preview",
-    "start": "tsx server.ts",
+    "dev": "tsx backend/server.ts",
+    "build": "vite --config frontend/vite.config.ts build",
+    "preview": "vite --config frontend/vite.config.ts preview",
+    "start": "tsx backend/server.ts",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
   },
@@ -35,5 +35,8 @@
     "esbuild": "^0.28.2",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
   }
 }

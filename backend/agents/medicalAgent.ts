@@ -1,4 +1,4 @@
-import { MedicalOutput, ResourceUnit, Zone, ZoneSeverityAnalysis } from '../../src/types/disaster';
+import { MedicalOutput, ResourceUnit, Zone, ZoneSeverityAnalysis } from '../../frontend/src/types/disaster';
 import { generateAgentResponse } from '../geminiClient';
 
 const MEDICAL_SYSTEM_INSTRUCTION = `You are the Medical Agent of ResQ-Mind.

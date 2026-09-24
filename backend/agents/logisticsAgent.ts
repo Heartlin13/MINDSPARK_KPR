@@ -1,4 +1,4 @@
-import { LogisticsOutput, ResourceUnit, Zone, ZoneSeverityAnalysis } from '../../src/types/disaster';
+import { LogisticsOutput, ResourceUnit, Zone, ZoneSeverityAnalysis } from '../../frontend/src/types/disaster';
 import { generateAgentResponse } from '../geminiClient';
 
 const LOGISTICS_SYSTEM_INSTRUCTION = `You are the Logistics Agent of ResQ-Mind.

@@ -15,7 +15,7 @@ import {
   Zone,
   AuditTrailEntry,
   RescuePassport,
-} from '../../src/types/disaster';
+} from '../../frontend/src/types/disaster';
 import {
   INITIAL_APPROVAL_STATE,
   INITIAL_AUDIT_TRAIL,
@@ -26,7 +26,7 @@ import {
   INITIAL_PASS_PORTS,
   INITIAL_PRIMARY_BACKUP_PLANS,
   INITIAL_WHAT_IF_SCENARIOS,
-} from '../../src/utils/defaultState';
+} from '../../frontend/src/utils/defaultState';
 import { runCommunicationAgent } from '../agents/communicationAgent';
 import { runCoordinatorAgent } from '../agents/coordinatorAgent';
 import { runLogisticsAgent } from '../agents/logisticsAgent';

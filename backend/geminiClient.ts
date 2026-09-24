@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { GeminiStatusInfo } from '../src/types/disaster';
+import { GeminiStatusInfo } from '../frontend/src/types/disaster';
 
 let aiInstance: GoogleGenAI | null = null;
 let lastVerifiedStatus: GeminiStatusInfo | null = null;

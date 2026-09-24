@@ -3,11 +3,11 @@ import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { globalExecutionEngine } from './server/engine/executionEngine';
-import { isGeminiConfigured, verifyGeminiConnection, generateAgentResponse } from './server/geminiClient';
-import { ResourceManager } from './server/engine/resourceManager';
-import { AgentRole } from './src/types/disaster';
-import { globalSystemConfig } from './server/config/systemConfigManager';
+import { globalExecutionEngine } from './engine/executionEngine';
+import { isGeminiConfigured, verifyGeminiConnection, generateAgentResponse } from './geminiClient';
+import { ResourceManager } from './engine/resourceManager';
+import { AgentRole } from '../frontend/src/types/disaster';
+import { globalSystemConfig } from './config/systemConfigManager';
 
 dotenv.config();
 
@@ -576,6 +576,7 @@ async function startServer() {
   if (!isProduction) {
     const disableHmr = process.env.DISABLE_HMR === 'true';
     const vite = await createViteServer({
+      configFile: path.resolve(__dirname, '..', 'frontend', 'vite.config.ts'),
       server: {
         middlewareMode: true,
         hmr: disableHmr ? false : undefined,
@@ -584,9 +585,9 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static(path.resolve(__dirname, 'dist')));
+    app.use(express.static(path.resolve(__dirname, '..', 'dist')));
     app.get('*', (req, res) => {
-      res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+      res.sendFile(path.resolve(__dirname, '..', 'dist', 'index.html'));
     });
   }
 

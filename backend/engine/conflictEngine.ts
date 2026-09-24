@@ -3,7 +3,7 @@ import {
   LogisticsOutput,
   MedicalOutput,
   ResourceUnit,
-} from '../../src/types/disaster';
+} from '../../frontend/src/types/disaster';
 
 export class ConflictEngine {
   /**

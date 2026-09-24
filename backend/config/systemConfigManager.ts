@@ -5,7 +5,7 @@ import {
   SystemConfigSafe, 
   UpdateConfigPayload, 
   TestConnectionResult 
-} from '../../src/types/disaster';
+} from '../../frontend/src/types/disaster';
 
 const ENV_PATH = path.resolve(process.cwd(), '.env');
 
