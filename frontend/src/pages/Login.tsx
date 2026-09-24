@@ -13,31 +13,38 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
+  const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(false);
+    setError(null);
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/auth/login', {
+      if (mode === 'register' && password !== confirmPassword) {
+        setError('Passwords do not match.');
+        return;
+      }
+      const response = await fetch(mode === 'login' ? '/api/auth/login' : '/api/auth/register', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify(mode === 'login' ? { username, password } : { username, email, password }),
       });
       const result = await response.json().catch(() => null);
       if (!response.ok || !result?.success || !result.data) {
-        throw new Error('Invalid credentials');
+        throw new Error(mode === 'login' ? 'Invalid username or password.' : result?.error || 'Unable to register.');
       }
       onLogin(result.data as AuthUser);
-    } catch {
-      setError(true);
+    } catch (loginError: any) {
+      setError(loginError?.message || 'Unable to register.');
     } finally {
       setIsSubmitting(false);
     }
@@ -63,7 +70,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         </div>
 
         <div className="border-l-2 border-red-500 pl-3 mb-7">
-          <h2 className="text-lg font-semibold text-white">Command center access</h2>
+          <h2 className="text-lg font-semibold text-white">{mode === 'login' ? 'Command center access' : 'Create operations account'}</h2>
           <p className="text-sm text-slate-400 mt-1">AI-powered decision support for coordinated disaster response.</p>
         </div>
 
@@ -81,6 +88,20 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               />
             </div>
           </label>
+
+          {mode === 'register' && (
+            <label className="block">
+              <span className="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-2">Email</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                autoComplete="email"
+                required
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
+              />
+            </label>
+          )}
 
           <label className="block">
             <span className="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-2">Password</span>
@@ -105,16 +126,41 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </div>
           </label>
 
-          {error && <p className="rounded-lg border border-red-500/40 bg-red-950/50 px-3 py-2 text-sm text-red-200">Invalid username or password.</p>}
+          {mode === 'register' && (
+            <label className="block">
+              <span className="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-2">Confirm password</span>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                autoComplete="new-password"
+                required
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
+              />
+            </label>
+          )}
+
+          {error && <p className="rounded-lg border border-red-500/40 bg-red-950/50 px-3 py-2 text-sm text-red-200">{error}</p>}
 
           <button
             type="submit"
             disabled={isSubmitting}
             className="w-full rounded-lg bg-red-600 py-3 text-sm font-semibold uppercase tracking-wider text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? 'Signing in...' : 'Sign In'}
+            {isSubmitting ? (mode === 'login' ? 'Signing in...' : 'Creating account...') : mode === 'login' ? 'Sign In' : 'Register'}
           </button>
         </form>
+
+        <button
+          type="button"
+          onClick={() => {
+            setMode((currentMode) => (currentMode === 'login' ? 'register' : 'login'));
+            setError(null);
+          }}
+          className="mt-5 w-full text-center text-sm text-slate-400 hover:text-white transition"
+        >
+          {mode === 'login' ? 'Need an account? Register' : 'Already registered? Sign in'}
+        </button>
       </section>
     </main>
   );

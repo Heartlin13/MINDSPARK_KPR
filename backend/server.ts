@@ -9,7 +9,7 @@ import { ResourceManager } from './engine/resourceManager';
 import { AgentRole } from '../frontend/src/types/disaster';
 import { globalSystemConfig } from './config/systemConfigManager';
 import { SatelliteService } from './services/satelliteService';
-import { applyLoginCookie, getAuthenticatedUser, logoutUser, loginUser, requireAuth, AuthenticatedRequest } from './auth';
+import { applyLoginCookie, getAuthenticatedUser, logoutUser, loginUser, registerUser, requireAuth, AuthenticatedRequest } from './auth';
 import { connectDatabase } from './database';
 import { loadPersistedState, persistReport, persistState } from './persistence';
 
@@ -41,6 +41,18 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (error) {
     console.error('[Auth] Login failed:', error instanceof Error ? error.message : 'unknown error');
     res.status(503).json({ success: false, error: 'Authentication service unavailable.' });
+  }
+});
+
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const user = await registerUser(req.body?.username, req.body?.email, req.body?.password);
+    const safeUser = applyLoginCookie(res, user);
+    res.status(201).json({ success: true, data: safeUser });
+  } catch (error: any) {
+    const message = error instanceof Error ? error.message : 'Unable to register.';
+    const status = message.includes('already registered') ? 409 : message.includes('required') || message.includes('characters') || message.includes('valid email') ? 400 : 503;
+    res.status(status).json({ success: false, error: status === 503 ? 'Registration service unavailable.' : message });
   }
 });
 

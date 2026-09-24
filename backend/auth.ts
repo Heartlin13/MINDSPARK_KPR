@@ -69,6 +69,31 @@ export async function loginUser(identifier: unknown, password: unknown): Promise
   return { id: user.id, username: user.username, email: user.email, role: user.role, ...{ __token: token } } as AuthenticatedUser & { __token: string };
 }
 
+export async function registerUser(username: unknown, email: unknown, password: unknown): Promise<AuthenticatedUser> {
+  if (!isDatabaseConfigured()) throw new Error('DATABASE_URL is not configured.');
+  if (typeof username !== 'string' || typeof password !== 'string') throw new Error('Username and password are required.');
+
+  const normalizedUsername = username.trim().toLowerCase();
+  const normalizedEmail = typeof email === 'string' && email.trim() ? email.trim().toLowerCase() : null;
+  if (!/^[a-z0-9._-]{3,40}$/.test(normalizedUsername)) throw new Error('Username must be 3-40 characters.');
+  if (normalizedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) throw new Error('Enter a valid email address.');
+  if (password.length < 12) throw new Error('Password must be at least 12 characters.');
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  try {
+    await prisma.user.create({
+      data: { username: normalizedUsername, email: normalizedEmail, passwordHash, role: 'USER' },
+    });
+  } catch (error: any) {
+    if (error?.code === 'P2002') throw new Error('Username or email is already registered.');
+    throw error;
+  }
+
+  const authenticatedUser = await loginUser(normalizedUsername, password);
+  if (!authenticatedUser) throw new Error('Unable to create session.');
+  return authenticatedUser;
+}
+
 export async function getAuthenticatedUser(request: Request): Promise<AuthenticatedUser | null> {
   if (!isDatabaseConfigured()) return null;
   const token = readCookie(request, SESSION_COOKIE);
