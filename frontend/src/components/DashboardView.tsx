@@ -350,11 +350,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             </div>
 
-            <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-[11px] font-mono text-slate-300">
-              <span className="text-slate-400 uppercase">Data Source</span>
-              <span className="font-bold text-cyan-300">{activeFloodZone.dataSource}</span>
-            </div>
-
             {activeFloodZone.status === 'DANGER' && (
               <div className="mt-4 flex items-center gap-2 rounded-lg border border-red-800 bg-red-950/50 px-3 py-2 text-[11px] font-mono font-bold text-red-200">
                 <span className="inline-block h-2 w-2 rounded-full bg-red-400" />
