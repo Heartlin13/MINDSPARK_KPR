@@ -122,7 +122,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       waterLevel: status === 'DANGER' ? 'Critical' : status === 'MEDIUM' ? 'Rising' : 'Normal',
       rainfall: status === 'DANGER' ? 'Heavy' : status === 'MEDIUM' ? 'Moderate' : 'Low',
       lastUpdated: observedZone?.observationTimestamp || zone.lastUpdated || new Date().toISOString(),
-      dataSource: satelliteMonitoring?.dataLabel || 'SIMULATED DATA',
       displayIndex: index,
     };
   });
