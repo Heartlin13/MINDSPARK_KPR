@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@layer base {
+  *,
+  *::before,
+  *::after,
+  html,
+  body,
+  input,
+  button,
+  select,
+  textarea,
+  kbd,
+  code,
+  pre {
+    font-family: "Times New Roman", Times, serif !important;
+  }
+}
+
+html,
+body,
+#root {
+  font-family: "Times New Roman", Times, serif !important;
+}
