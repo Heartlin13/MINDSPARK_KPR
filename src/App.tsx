@@ -20,9 +20,6 @@ import { AgentRole, GeminiStatusInfo, SystemExecutionState } from './types/disas
 import { INITIAL_DEFAULT_STATE } from './utils/defaultState';
 import { CheckCircle2, AlertTriangle, X } from 'lucide-react';
 
-// WebSocket status type for robust real-time synchronization
-type WebSocketState = 'connecting' | 'connected' | 'reconnecting' | 'idle' | 'offline';
-
 interface ToastNotification {
   id: string;
   type: 'success' | 'error' | 'info';
@@ -37,7 +34,6 @@ export default function App() {
   const [selectedAgent, setSelectedAgent] = useState<AgentRole>('Medical Agent');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [wsState, setWsState] = useState<WebSocketState>('idle');
   const [toast, setToast] = useState<ToastNotification | null>(null);
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
@@ -69,14 +65,6 @@ export default function App() {
 
   const stateDelayRef = React.useRef<number>(BASE_STATE_INTERVAL_MS);
   const geminiDelayRef = React.useRef<number>(BASE_GEMINI_INTERVAL_MS);
-
-  // WebSocket linear backoff refs (start at 2000ms, increase by 2000ms on failure up to 16000ms max)
-  const wsLinearBackoffMsRef = React.useRef<number>(2000);
-  const WS_LINEAR_STEP_MS = 2000;
-  const WS_MAX_BACKOFF_MS = 16000;
-  const wsRef = React.useRef<WebSocket | null>(null);
-  const wsReconnectTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-  const isMountedRef = React.useRef<boolean>(true);
 
   // Fetch state from server with resilient retry & exponential backoff on error/429
   const fetchState = useCallback(async () => {
@@ -133,134 +121,6 @@ export default function App() {
     }
   }, []);
 
-  // Robust WebSocket Connection Handler with Linear Backoff on Failure
-  const connectWebSocket = useCallback(() => {
-    // Guard against running in non-browser environments or when component unmounted
-    if (!isMountedRef.current || typeof window === 'undefined' || typeof WebSocket === 'undefined') {
-      return;
-    }
-
-    // Clean up any stale socket instance
-    if (wsRef.current) {
-      try {
-        wsRef.current.onopen = null;
-        wsRef.current.onmessage = null;
-        wsRef.current.onerror = null;
-        wsRef.current.onclose = null;
-        if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
-          wsRef.current.close();
-        }
-      } catch {
-        // Safe disposal
-      }
-      wsRef.current = null;
-    }
-
-    try {
-      setWsState((prev) => (prev === 'idle' ? 'connecting' : 'reconnecting'));
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
-
-      const socket = new WebSocket(wsUrl);
-      wsRef.current = socket;
-
-      socket.onopen = () => {
-        if (!isMountedRef.current) return;
-        setWsState('connected');
-        // Reset linear backoff on successful connection
-        wsLinearBackoffMsRef.current = 2000;
-        // Immediate state sync upon channel open
-        fetchState();
-      };
-
-      socket.onmessage = (event) => {
-        if (!isMountedRef.current) return;
-        try {
-          const payload = JSON.parse(event.data);
-          if (payload?.type === 'STATE_UPDATE' && payload.data) {
-            setState(payload.data);
-          } else if (payload?.type === 'PING') {
-            socket.send(JSON.stringify({ type: 'PONG' }));
-          }
-        } catch {
-          // Ignore non-json or unparsed ping frames safely
-        }
-      };
-
-      // Handle socket error gracefully - prevents unhandled rejection or app crash during early mount
-      socket.onerror = () => {
-        // Suppress browser console noise and handle state transition safely
-        if (!isMountedRef.current) return;
-        setWsState('offline');
-      };
-
-      socket.onclose = () => {
-        if (!isMountedRef.current) return;
-        setWsState('offline');
-        wsRef.current = null;
-
-        // Schedule reconnection with linear backoff only when connection fails
-        const nextDelay = wsLinearBackoffMsRef.current;
-        wsLinearBackoffMsRef.current = Math.min(wsLinearBackoffMsRef.current + WS_LINEAR_STEP_MS, WS_MAX_BACKOFF_MS);
-
-        if (wsReconnectTimeoutRef.current) {
-          clearTimeout(wsReconnectTimeoutRef.current);
-        }
-
-        wsReconnectTimeoutRef.current = setTimeout(() => {
-          if (isMountedRef.current) {
-            connectWebSocket();
-          }
-        }, nextDelay);
-      };
-    } catch {
-      // Early mount initialization failure guard: ensures UI doesn't crash
-      if (!isMountedRef.current) return;
-      setWsState('offline');
-      const nextDelay = wsLinearBackoffMsRef.current;
-      wsLinearBackoffMsRef.current = Math.min(wsLinearBackoffMsRef.current + WS_LINEAR_STEP_MS, WS_MAX_BACKOFF_MS);
-
-      if (wsReconnectTimeoutRef.current) {
-        clearTimeout(wsReconnectTimeoutRef.current);
-      }
-      wsReconnectTimeoutRef.current = setTimeout(() => {
-        if (isMountedRef.current) {
-          connectWebSocket();
-        }
-      }, nextDelay);
-    }
-  }, [fetchState]);
-
-  // Initialize WebSocket connection safely after early mount
-  useEffect(() => {
-    isMountedRef.current = true;
-
-    // Slight deferral (300ms) to ensure early DOM and network context are ready
-    const initTimer = setTimeout(() => {
-      connectWebSocket();
-    }, 300);
-
-    return () => {
-      isMountedRef.current = false;
-      clearTimeout(initTimer);
-      if (wsReconnectTimeoutRef.current) {
-        clearTimeout(wsReconnectTimeoutRef.current);
-      }
-      if (wsRef.current) {
-        try {
-          wsRef.current.onopen = null;
-          wsRef.current.onmessage = null;
-          wsRef.current.onerror = null;
-          wsRef.current.onclose = null;
-          wsRef.current.close();
-        } catch {
-          // Safe unmount
-        }
-        wsRef.current = null;
-      }
-    };
-  }, [connectWebSocket]);
-
   // Resilient Exponential Backoff Polling Loops
   useEffect(() => {
     let stateTimeoutId: NodeJS.Timeout;
@@ -301,11 +161,9 @@ export default function App() {
   const handleManualReconnect = useCallback(() => {
     stateDelayRef.current = BASE_STATE_INTERVAL_MS;
     geminiDelayRef.current = BASE_GEMINI_INTERVAL_MS;
-    wsLinearBackoffMsRef.current = 2000;
     fetchState();
     fetchGeminiStatus();
-    connectWebSocket();
-  }, [fetchState, fetchGeminiStatus, connectWebSocket]);
+  }, [fetchState, fetchGeminiStatus]);
 
   // Run full coordinated response (Section 9)
   const handleRunCoordinatedResponse = async () => {
