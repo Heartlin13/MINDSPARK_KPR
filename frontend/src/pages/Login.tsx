@@ -54,14 +54,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-4 py-8 relative overflow-hidden">
       <div className="absolute inset-0 opacity-30 pointer-events-none bg-[radial-gradient(circle_at_top,_rgba(220,38,38,0.18),_transparent_42%)]" />
       <section className="relative w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/95 p-6 sm:p-8 shadow-2xl shadow-black/50">
-        <div className="flex items-start gap-3 mb-8">
+        <div className="flex items-center gap-3 mb-8">
           <div className="w-11 h-11 rounded-xl bg-red-600 flex items-center justify-center text-white shadow-lg shadow-red-950/50">
             <ShieldAlert className="w-6 h-6" />
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-bold font-mono tracking-wide text-white">ResQ-Mind</h1>
-              <span className="rounded border border-emerald-800/60 bg-slate-950 px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wide text-emerald-400">
+              <span className="whitespace-nowrap rounded border border-emerald-800/60 bg-slate-950 px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wide text-emerald-400">
                 Simulated Live Data
               </span>
             </div>
