@@ -1,0 +1,9 @@
+{
+  "appId": "com.resqmind.app",
+  "appName": "RESQ-MIND",
+  "webDir": "dist",
+  "server": {
+    "url": "https://mindspark-kpr.onrender.com",
+    "cleartext": false
+  }
+}
