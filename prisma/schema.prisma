@@ -1,0 +1,243 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String    @id @default(cuid())
+  username    String    @unique
+  email       String?   @unique
+  passwordHash String
+  role        String    @default("ADMIN")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+  sessions    Session[]
+  allocations ResourceAllocation[] @relation("AllocationUser")
+  conflictsResolved Conflict[] @relation("ConflictResolver")
+
+  @@index([email])
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model DisasterIncident {
+  id          String   @id
+  eventType   String
+  status      String
+  severity    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  zones       Zone[]
+  allocations ResourceAllocation[]
+  messages    AgentMessage[]
+  conflicts   Conflict[]
+  plans       ResponsePlan[]
+  alerts      PublicAlert[]
+  history     SimulationHistory[]
+  reports     Report[]
+  snapshots   SimulationSnapshot[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Zone {
+  id                     String   @id
+  incidentId             String?
+  name                   String
+  riskLevel              String
+  floodStatus            String?
+  peopleAtRisk           Int      @default(0)
+  waterLevel             String?
+  rainfallIntensity      Float?
+  waterSpreadPercentage  Float?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  incident               DisasterIncident? @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  allocations            ResourceAllocation[]
+  alerts                 PublicAlert[]
+  observations           SatelliteObservation[]
+
+  @@index([incidentId])
+  @@index([riskLevel])
+}
+
+model Resource {
+  id                String   @id
+  type              String
+  name              String
+  totalQuantity     Int      @default(0)
+  availableQuantity Int      @default(0)
+  status            String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  allocations       ResourceAllocation[]
+  conflicts         Conflict[]
+
+  @@index([type])
+  @@index([status])
+}
+
+model ResourceAllocation {
+  id               String   @id @default(cuid())
+  resourceId       String
+  zoneId           String?
+  incidentId       String?
+  allocatedQuantity Int
+  allocatedBy      String?
+  reason           String?
+  createdAt        DateTime @default(now())
+  resource         Resource @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+  zone             Zone? @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  incident         DisasterIncident? @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  allocator        User? @relation("AllocationUser", fields: [allocatedBy], references: [id], onDelete: SetNull)
+
+  @@index([resourceId])
+  @@index([zoneId])
+  @@index([incidentId])
+}
+
+model Agent {
+  id          String   @id
+  name        String
+  type        String
+  status      String
+  lastRunAt   DateTime?
+  messages    AgentMessage[]
+
+  @@index([type])
+}
+
+model AgentMessage {
+  id          String   @id @default(cuid())
+  agentId     String
+  incidentId  String?
+  messageType String
+  message     String
+  createdAt   DateTime @default(now())
+  agent       Agent   @relation(fields: [agentId], references: [id], onDelete: Restrict)
+  incident    DisasterIncident? @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+
+  @@index([agentId])
+  @@index([incidentId])
+  @@index([createdAt])
+}
+
+model Conflict {
+  id          String   @id @default(cuid())
+  incidentId  String?
+  resourceId  String?
+  description String
+  severity    String
+  status      String
+  resolution  String?
+  resolvedBy  String?
+  createdAt   DateTime @default(now())
+  resolvedAt  DateTime?
+  incident    DisasterIncident? @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  resource    Resource? @relation(fields: [resourceId], references: [id], onDelete: SetNull)
+  resolver    User? @relation("ConflictResolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
+
+  @@index([incidentId])
+  @@index([status])
+}
+
+model ResponsePlan {
+  id         String   @id @default(cuid())
+  incidentId String?
+  priority   Int      @default(0)
+  decision   String
+  evidence   String?
+  constraint String?
+  tradeoff   String?
+  status     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  incident   DisasterIncident? @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+
+  @@index([incidentId])
+  @@index([status])
+}
+
+model PublicAlert {
+  id         String   @id @default(cuid())
+  incidentId String?
+  zoneId     String?
+  alertType  String
+  message    String
+  severity   String
+  createdAt  DateTime @default(now())
+  incident   DisasterIncident? @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  zone       Zone? @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+
+  @@index([incidentId])
+  @@index([zoneId])
+  @@index([createdAt])
+}
+
+model SatelliteObservation {
+  id                    String   @id @default(cuid())
+  zoneId                String
+  riskLevel             String
+  waterSpreadPercentage Float?
+  waterLevel            String?
+  rainfallIntensity     Float?
+  peopleAtRisk          Int      @default(0)
+  dataSource            String
+  observedAt            DateTime
+  zone                  Zone     @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+
+  @@index([zoneId])
+  @@index([observedAt])
+}
+
+model SimulationHistory {
+  id          String   @id
+  incidentId  String?
+  action      String
+  description String
+  createdAt   DateTime @default(now())
+  incident    DisasterIncident? @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+
+  @@index([incidentId])
+  @@index([createdAt])
+}
+
+model Report {
+  id         String   @id
+  incidentId String?
+  reportType String
+  status     String
+  reportData Json
+  createdAt  DateTime @default(now())
+  incident   DisasterIncident? @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+
+  @@index([incidentId])
+  @@index([createdAt])
+}
+
+model SimulationSnapshot {
+  id          String   @id
+  incidentId  String?
+  state       Json
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  incident    DisasterIncident? @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+
+  @@index([incidentId])
+}

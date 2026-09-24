@@ -6,9 +6,12 @@ import {
   Play,
   Clock,
   Radio,
-  Sparkles
+  Sparkles,
+  LogOut,
+  UserRound
 } from 'lucide-react';
 import { GeminiStatusInfo, SystemExecutionState } from '../types/disaster';
+import { AuthUser } from './LoginPage';
 
 interface NavbarProps {
   state: SystemExecutionState | null;
@@ -17,6 +20,8 @@ interface NavbarProps {
   onReset: () => void;
   onToggleMobileSidebar?: () => void;
   isLoading: boolean;
+  user: AuthUser;
+  onLogout: () => Promise<void>;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -26,6 +31,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onReset,
   onToggleMobileSidebar,
   isLoading,
+  user,
+  onLogout,
 }) => {
   const [currentTime, setCurrentTime] = useState<string>('');
 
@@ -138,6 +145,21 @@ export const Navbar: React.FC<NavbarProps> = ({
               {isLoading ? '...' : 'COORDINATE'}
             </span>
           </button>
+
+          <div className="flex items-center gap-2 pl-1">
+            <UserRound className="w-4 h-4 text-slate-400" />
+            <span className="hidden sm:inline max-w-24 truncate text-xs text-slate-300" title={user.email || user.username}>
+              {user.username}
+            </span>
+            <button
+              onClick={onLogout}
+              title="Sign out"
+              aria-label="Sign out"
+              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 border border-slate-800 transition cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       </div>
     </header>

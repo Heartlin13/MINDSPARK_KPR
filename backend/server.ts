@@ -9,6 +9,9 @@ import { ResourceManager } from './engine/resourceManager';
 import { AgentRole } from '../frontend/src/types/disaster';
 import { globalSystemConfig } from './config/systemConfigManager';
 import { SatelliteService } from './services/satelliteService';
+import { applyLoginCookie, getAuthenticatedUser, logoutUser, loginUser, requireAuth, AuthenticatedRequest } from './auth';
+import { connectDatabase } from './database';
+import { loadPersistedState, persistReport, persistState } from './persistence';
 
 dotenv.config();
 
@@ -21,6 +24,40 @@ const allowedOrigin = process.env.CORS_ORIGIN || process.env.APP_URL;
 const satelliteService = new SatelliteService();
 
 app.use(express.json());
+
+async function persistCurrentState(): Promise<void> {
+  await persistState(globalExecutionEngine.getState());
+}
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const user = await loginUser(req.body?.identifier ?? req.body?.username ?? req.body?.email, req.body?.password);
+    const safeUser = applyLoginCookie(res, user);
+    if (!safeUser) {
+      res.status(401).json({ success: false, error: 'Invalid username/email or password.' });
+      return;
+    }
+    res.json({ success: true, data: safeUser });
+  } catch (error) {
+    console.error('[Auth] Login failed:', error instanceof Error ? error.message : 'unknown error');
+    res.status(503).json({ success: false, error: 'Authentication service unavailable.' });
+  }
+});
+
+app.post('/api/auth/logout', async (req, res) => {
+  await logoutUser(req, res);
+  res.json({ success: true });
+});
+
+app.get('/api/auth/me', async (req, res) => {
+  try {
+    const user = await getAuthenticatedUser(req);
+    res.json({ success: true, data: user });
+  } catch (error) {
+    console.error('[Auth] Session lookup failed:', error instanceof Error ? error.message : 'unknown error');
+    res.status(503).json({ success: false, error: 'Authentication service unavailable.' });
+  }
+});
 
 // Allow same-origin requests by default, with an explicit origin for external clients.
 app.use((req, res, next) => {
@@ -35,6 +72,14 @@ app.use((req, res, next) => {
     return res.sendStatus(200);
   }
   next();
+});
+
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/auth/') || req.path === '/health') {
+    next();
+    return;
+  }
+  void requireAuth(req as AuthenticatedRequest, res, next);
 });
 
 const adminProtectedRoutes = [
@@ -281,6 +326,7 @@ app.post('/api/run-agent', async (req, res) => {
     }
 
     const result = await globalExecutionEngine.runSingleAgent(mappedRole);
+    await persistCurrentState();
     res.json({
       success: true,
       agent: mappedRole,
@@ -296,6 +342,7 @@ app.post('/api/run-agent', async (req, res) => {
 app.post('/api/run-all-agents', async (req, res) => {
   try {
     const state = await globalExecutionEngine.runFullResponse();
+    await persistCurrentState();
     res.json({ success: true, data: state });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -303,9 +350,10 @@ app.post('/api/run-all-agents', async (req, res) => {
 });
 
 // 13. POST /api/inject-emergency
-app.post('/api/inject-emergency', (req, res) => {
+app.post('/api/inject-emergency', async (req, res) => {
   try {
     const state = globalExecutionEngine.injectDamFailure();
+    await persistCurrentState();
     res.json({ success: true, data: state });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -321,6 +369,7 @@ app.post('/api/emergency/trigger', async (req, res) => {
       targetZone || 'Zone C',
       Number(severityIncrease) || 25
     );
+    await persistCurrentState();
     res.json({ success: true, data: state });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -328,9 +377,10 @@ app.post('/api/emergency/trigger', async (req, res) => {
 });
 
 // 14. POST /api/reset
-app.post('/api/reset', (req, res) => {
+app.post('/api/reset', async (req, res) => {
   try {
     const state = globalExecutionEngine.resetSimulation();
+    await persistCurrentState();
     res.json({ success: true, data: state });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -338,7 +388,7 @@ app.post('/api/reset', (req, res) => {
 });
 
 // FEATURE 2: POST /api/plan/approve (Human-in-the-Loop Approval)
-app.post('/api/plan/approve', (req, res) => {
+app.post('/api/plan/approve', async (req, res) => {
   try {
     const { approverName, role, decision, modifications, reason } = req.body;
     const state = globalExecutionEngine.approvePlan(
@@ -348,6 +398,7 @@ app.post('/api/plan/approve', (req, res) => {
       modifications,
       reason
     );
+    await persistCurrentState();
     res.json({ success: true, data: state });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -355,13 +406,14 @@ app.post('/api/plan/approve', (req, res) => {
 });
 
 // POST /api/plan/dispatch (Guarded Resource Dispatch - Disabled for Unapproved Plans)
-app.post('/api/plan/dispatch', (req, res) => {
+app.post('/api/plan/dispatch', async (req, res) => {
   try {
     const { officerName } = req.body;
     const result = globalExecutionEngine.dispatchResources(officerName);
     if (!result.success) {
       return res.status(403).json(result);
     }
+    await persistCurrentState();
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -369,13 +421,14 @@ app.post('/api/plan/dispatch', (req, res) => {
 });
 
 // FEATURE 4: POST /api/passport/verify (Help Received Verification & Resource Reuse)
-app.post('/api/passport/verify', (req, res) => {
+app.post('/api/passport/verify', async (req, res) => {
   try {
     const { incidentId, status, notes } = req.body;
     if (!incidentId || !status) {
       return res.status(400).json({ success: false, error: 'incidentId and status are required' });
     }
     const state = globalExecutionEngine.verifyHelpReceived(incidentId, status, notes);
+    await persistCurrentState();
     res.json({ success: true, data: state });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -383,13 +436,14 @@ app.post('/api/passport/verify', (req, res) => {
 });
 
 // FEATURE 6: POST /api/plan/activate-backup
-app.post('/api/plan/activate-backup', (req, res) => {
+app.post('/api/plan/activate-backup', async (req, res) => {
   try {
     const { incidentId } = req.body;
     if (!incidentId) {
       return res.status(400).json({ success: false, error: 'incidentId is required' });
     }
     const state = globalExecutionEngine.activateBackupPlan(incidentId);
+    await persistCurrentState();
     res.json({ success: true, data: state });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -397,13 +451,14 @@ app.post('/api/plan/activate-backup', (req, res) => {
 });
 
 // FEATURE 7: POST /api/what-if/simulate
-app.post('/api/what-if/simulate', (req, res) => {
+app.post('/api/what-if/simulate', async (req, res) => {
   try {
     const { scenarioId } = req.body;
     if (!scenarioId) {
       return res.status(400).json({ success: false, error: 'scenarioId is required' });
     }
     const state = globalExecutionEngine.runWhatIfSimulation(scenarioId);
+    await persistCurrentState();
     res.json({ success: true, data: state });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -411,13 +466,14 @@ app.post('/api/what-if/simulate', (req, res) => {
 });
 
 // FEATURE 7: POST /api/what-if/commit
-app.post('/api/what-if/commit', (req, res) => {
+app.post('/api/what-if/commit', async (req, res) => {
   try {
     const { scenarioId, officerName } = req.body;
     if (!scenarioId) {
       return res.status(400).json({ success: false, error: 'scenarioId is required' });
     }
     const state = globalExecutionEngine.commitWhatIfPlan(scenarioId, officerName);
+    await persistCurrentState();
     res.json({ success: true, data: state });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -425,10 +481,11 @@ app.post('/api/what-if/commit', (req, res) => {
 });
 
 // FEATURE 15: POST /api/intel/verify-gap
-app.post('/api/intel/verify-gap', (req, res) => {
+app.post('/api/intel/verify-gap', async (req, res) => {
   try {
     const { zoneId } = req.body;
     const state = globalExecutionEngine.verifyDataGap(zoneId || 'Zone D');
+    await persistCurrentState();
     res.json({ success: true, data: state });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -436,7 +493,7 @@ app.post('/api/intel/verify-gap', (req, res) => {
 });
 
 // 15. POST /api/reports/generate
-app.post('/api/reports/generate', (req, res) => {
+app.post('/api/reports/generate', async (req, res) => {
   try {
     const state = globalExecutionEngine.getState();
     const report = {
@@ -456,6 +513,7 @@ app.post('/api/reports/generate', (req, res) => {
       tradeoffs: state.coordinatorOutput?.tradeoffs || [],
       publicAlert: state.coordinatorOutput?.public_alert || '',
     };
+    await persistReport(report, state.activeEmergencyId);
     res.json({ success: true, data: report });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -547,18 +605,20 @@ app.get('/api/simulation/state', (req, res) => {
   }
 });
 
-app.post('/api/simulation/reset', (req, res) => {
+app.post('/api/simulation/reset', async (req, res) => {
   try {
     const state = globalExecutionEngine.resetSimulation();
+    await persistCurrentState();
     res.json({ success: true, data: state });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.post('/api/simulation/inject-emergency', (req, res) => {
+app.post('/api/simulation/inject-emergency', async (req, res) => {
   try {
     const state = globalExecutionEngine.injectDamFailure();
+    await persistCurrentState();
     res.json({ success: true, data: state });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -568,6 +628,7 @@ app.post('/api/simulation/inject-emergency', (req, res) => {
 app.post('/api/agents/run-all', async (req, res) => {
   try {
     const state = await globalExecutionEngine.runFullResponse();
+    await persistCurrentState();
     res.json({ success: true, data: state });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -603,6 +664,14 @@ app.get('/api/health', (req, res) => {
 // Mount Vite middleware in development or static in production
 async function startServer() {
   const isProduction = process.env.NODE_ENV === 'production';
+
+  await connectDatabase();
+  const persistedState = await loadPersistedState();
+  if (persistedState) {
+    globalExecutionEngine.restoreState(persistedState);
+  } else {
+    await persistCurrentState();
+  }
 
   if (!isProduction) {
     const disableHmr = process.env.DISABLE_HMR === 'true';

@@ -12,6 +12,10 @@ export class ResourceManager {
     return this.resources;
   }
 
+  public restore(resources: ResourceUnit[]): void {
+    this.resources = resources.map((resource) => ({ ...resource }));
+  }
+
   public reset(): ResourceUnit[] {
     this.resources = getInitialResources();
     return this.resources;

@@ -185,6 +185,11 @@ export class ExecutionEngine {
     return this.state;
   }
 
+  public restoreState(state: SystemExecutionState): void {
+    this.state = state;
+    this.resourceManager.restore(state.resources);
+  }
+
   private addAuditTrail(source: string, action: string, status: AuditTrailEntry['status'], details?: string) {
     const entry: AuditTrailEntry = {
       id: `AUD-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 1000)}`,
@@ -303,9 +308,11 @@ export class ExecutionEngine {
   }
 
   public resetSimulation(): SystemExecutionState {
+    const preservedHistory = this.state.history;
     this.simulator = new DisasterSimulator();
     this.resourceManager.reset();
     this.state = this.buildInitialState();
+    this.state.history = preservedHistory;
     this.addLog('INFO', 'Simulator', 'Disaster simulation state and resource inventory reset to factory baseline.');
     return this.state;
   }

@@ -16,6 +16,7 @@ import { ResponseHistoryView } from './components/ResponseHistoryView';
 import { ArchitectureView } from './components/ArchitectureView';
 import { ReportsView } from './components/ReportsView';
 import { SettingsView } from './components/SettingsView';
+import { AuthUser, LoginPage } from './components/LoginPage';
 import { AgentRole, GeminiStatusInfo, SatelliteMonitoring, SystemExecutionState } from './types/disaster';
 import { INITIAL_DEFAULT_STATE } from './utils/defaultState';
 import { CheckCircle2, AlertTriangle, X } from 'lucide-react';
@@ -27,7 +28,12 @@ interface ToastNotification {
   message: string;
 }
 
-export default function App() {
+interface DashboardAppProps {
+  user: AuthUser;
+  onLogout: () => Promise<void>;
+}
+
+function DashboardApp({ user, onLogout }: DashboardAppProps) {
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
   const [state, setState] = useState<SystemExecutionState>(INITIAL_DEFAULT_STATE);
   const [geminiStatus, setGeminiStatus] = useState<GeminiStatusInfo | null>(null);
@@ -290,6 +296,8 @@ export default function App() {
         onReset={handleReset}
         onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
         isLoading={isLoading}
+        user={user}
+        onLogout={onLogout}
       />
 
       {/* Main Layout: Left Sidebar + Main Content */}
@@ -445,4 +453,34 @@ export default function App() {
       )}
     </div>
   );
+}
+
+export default function App() {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/auth/me')
+      .then(async (response) => (response.ok ? response.json() : { success: false }))
+      .then((result) => {
+        if (active && result.success && result.data) setUser(result.data);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setIsCheckingSession(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
+    setUser(null);
+  };
+
+  if (isCheckingSession) return <div className="min-h-screen bg-slate-950" />;
+  if (!user) return <LoginPage onLogin={setUser} />;
+  return <DashboardApp user={user} onLogout={handleLogout} />;
 }
