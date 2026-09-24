@@ -252,7 +252,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-red-500/30 selection:text-white antialiased">
+    <div className="h-screen overflow-hidden bg-slate-950 text-slate-100 flex flex-col selection:bg-red-500/30 selection:text-white antialiased">
       {/* Top Navbar */}
       <Navbar
         state={state}
@@ -264,7 +264,7 @@ export default function App() {
       />
 
       {/* Main Layout: Left Sidebar + Main Content */}
-      <div className="flex-1 flex flex-row relative min-h-0">
+      <div className="flex-1 flex flex-row relative min-h-0 overflow-hidden">
         <Sidebar
           currentTab={currentTab}
           onTabChange={setCurrentTab}
@@ -276,7 +276,7 @@ export default function App() {
         />
 
         {/* Main Content Area */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full overflow-y-auto">
+        <main className="flex-1 h-full min-h-0 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full overflow-y-auto overflow-x-hidden">
           {fetchError && (
             <div className="mb-4 p-3 bg-slate-900 border border-amber-600/60 rounded-xl text-xs font-mono text-amber-300 flex items-center justify-between gap-2 shadow-xs">
               <span className="truncate">Connection notice: {fetchError}. Retrying in background...</span>

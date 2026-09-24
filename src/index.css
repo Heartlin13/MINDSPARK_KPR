@@ -21,4 +21,6 @@ html,
 body,
 #root {
   font-family: "Times New Roman", Times, serif !important;
+  height: 100%;
+  overflow: hidden;
 }
