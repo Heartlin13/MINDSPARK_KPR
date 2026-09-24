@@ -50,9 +50,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="bg-slate-950 border-b border-slate-800 text-slate-100 sticky top-0 z-30 select-none">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto w-full min-h-[74px] px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-6">
         {/* Left: Branding strictly matching Section 1 & 3 */}
-        <div className="flex items-center space-x-3 min-w-0">
+        <div className="flex min-w-0 shrink items-center gap-3">
           {onToggleMobileSidebar && (
             <button
               onClick={onToggleMobileSidebar}
@@ -67,8 +67,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             <ShieldAlert className="w-4 h-4" />
           </div>
 
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
+          <div className="min-w-0 flex flex-col justify-center">
+            <div className="flex items-center gap-2 whitespace-nowrap">
               <span className="font-extrabold text-base tracking-wide font-mono text-white leading-tight">
                 ResQ-Mind
               </span>
@@ -76,16 +76,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 Simulated Live Data
               </span>
             </div>
-            <span className="text-[11px] text-slate-400 block leading-tight truncate">
+            <span className="block truncate text-[11px] leading-tight text-slate-400 whitespace-nowrap">
               Real-Time Disaster Response Coordination
             </span>
           </div>
         </div>
 
         {/* Right side: Live System Status, Gemini AI, Clock & Primary Actions */}
-        <div className="flex items-center space-x-3 sm:space-x-4 shrink-0">
+        <div className="flex shrink-0 items-center justify-end gap-4 lg:gap-5 whitespace-nowrap">
           {/* Dynamic Last Updated Clock */}
-          <div className="hidden lg:flex flex-col text-right font-mono">
+          <div className="hidden lg:flex flex-col justify-center text-right font-mono">
             <span className="text-[10px] text-slate-500 uppercase tracking-wider">Last Updated</span>
             <span className="text-xs text-slate-200 font-semibold flex items-center gap-1 justify-end">
               <Clock className="w-3 h-3 text-slate-400" />
@@ -93,12 +93,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             </span>
           </div>
 
-          <div className="hidden lg:block h-6 w-px bg-slate-800" />
+          <div className="hidden lg:block h-7 w-px shrink-0 bg-slate-800" />
 
           {/* Gemini AI Status */}
-          <div className="hidden sm:flex flex-col text-left font-mono">
+          <div className="hidden sm:flex flex-col justify-center text-left font-mono">
             <span className="text-[10px] text-slate-500 uppercase tracking-wider">Gemini AI</span>
-            <div className="flex items-center space-x-1.5 text-xs">
+            <div className="flex items-center gap-1.5 text-xs">
               <span
                 className={`w-2 h-2 rounded-full ${
                   isGeminiConnected ? 'bg-emerald-400' : 'bg-amber-400'
@@ -110,12 +110,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          <div className="hidden sm:block h-6 w-px bg-slate-800" />
+          <div className="hidden sm:block h-7 w-px shrink-0 bg-slate-800" />
 
           {/* System Status */}
-          <div className="hidden md:flex flex-col text-left font-mono">
+          <div className="hidden md:flex flex-col justify-center text-left font-mono">
             <span className="text-[10px] text-slate-500 uppercase tracking-wider">System</span>
-            <div className="flex items-center space-x-1.5 text-xs">
+            <div className="flex items-center gap-1.5 text-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
               <span className="text-slate-200 font-medium">Operational</span>
             </div>
@@ -146,7 +146,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </span>
           </button>
 
-          <div className="flex items-center gap-2 pl-1">
+          <div className="flex items-center gap-2">
             <UserRound className="w-4 h-4 text-slate-400" />
             <span className="hidden sm:inline max-w-24 truncate text-xs text-slate-300" title={user.email || user.username}>
               {user.username}
