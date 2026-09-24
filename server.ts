@@ -15,13 +15,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const port = 3000;
+const port = Number(process.env.PORT) || 3000;
+const allowedOrigin = process.env.CORS_ORIGIN || process.env.APP_URL;
 
 app.use(express.json());
 
-// CORS & Security headers for seamless development and iframe embedding
+// Allow same-origin requests by default, with an explicit origin for external clients.
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  const requestOrigin = req.headers.origin;
+  if (requestOrigin && allowedOrigin && requestOrigin === allowedOrigin) {
+    res.header('Access-Control-Allow-Origin', requestOrigin);
+    res.header('Vary', 'Origin');
+  }
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   if (req.method === 'OPTIONS') {
@@ -29,6 +34,45 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+const adminProtectedRoutes = [
+  '/api/run-all-agents',
+  '/api/run-agent',
+  '/api/reset',
+  '/api/emergency/trigger',
+  '/api/plan/approve',
+  '/api/plan/dispatch',
+  '/api/config/system',
+  '/api/reports/email',
+];
+
+function requireAdminApiKey(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const configuredKey = process.env.ADMIN_API_KEY?.trim();
+  if (!configuredKey) {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(503).json({ success: false, error: 'Admin API is not configured.' });
+    }
+    return next();
+  }
+
+  const requestOrigin = req.headers.origin;
+  const sameOrigin = Boolean(requestOrigin) && (requestOrigin === `${req.protocol}://${req.get('host')}` || requestOrigin === allowedOrigin);
+  if (sameOrigin) {
+    return next();
+  }
+
+  const authorization = req.header('authorization');
+  const bearerKey = authorization?.startsWith('Bearer ') ? authorization.slice(7).trim() : undefined;
+  const providedKey = req.header('x-admin-api-key') || bearerKey;
+
+  if (!providedKey || providedKey !== configuredKey) {
+    return res.status(401).json({ success: false, error: 'Valid admin API key required.' });
+  }
+
+  next();
+}
+
+app.use(adminProtectedRoutes, requireAdminApiKey);
 
 // =========================================================================
 // API ENDPOINTS (As specified in requirement 21 & 3)
