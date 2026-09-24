@@ -52,8 +52,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <ShieldAlert className="w-6 h-6" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-emerald-400">RESQ-MIND</p>
-            <h1 className="text-2xl font-bold font-mono tracking-wide text-white">ResQ-Mind</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold font-mono tracking-wide text-white">ResQ-Mind</h1>
+              <span className="rounded border border-emerald-800/60 bg-slate-950 px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wide text-emerald-400">
+                Simulated Live Data
+              </span>
+            </div>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">Real-Time Multi-Agent Disaster Response Coordination</p>
           </div>
         </div>
