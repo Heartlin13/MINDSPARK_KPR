@@ -52,6 +52,10 @@ app.post('/api/auth/logout', async (req, res) => {
 app.get('/api/auth/me', async (req, res) => {
   try {
     const user = await getAuthenticatedUser(req);
+    if (!user) {
+      res.status(401).json({ success: false, error: 'Authentication required.' });
+      return;
+    }
     res.json({ success: true, data: user });
   } catch (error) {
     console.error('[Auth] Session lookup failed:', error instanceof Error ? error.message : 'unknown error');
