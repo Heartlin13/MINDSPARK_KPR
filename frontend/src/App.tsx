@@ -33,6 +33,8 @@ interface DashboardAppProps {
   onLogout: () => Promise<void>;
 }
 
+type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated';
+
 function DashboardApp({ user, onLogout }: DashboardAppProps) {
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
   const [state, setState] = useState<SystemExecutionState>(INITIAL_DEFAULT_STATE);
@@ -457,18 +459,27 @@ function DashboardApp({ user, onLogout }: DashboardAppProps) {
 
 export default function App() {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [authStatus, setAuthStatus] = useState<AuthStatus>('checking');
 
   useEffect(() => {
     let active = true;
     fetch('/api/auth/me', { credentials: 'include' })
       .then(async (response) => (response.ok ? response.json() : { success: false }))
       .then((result) => {
-        if (active && result.success && result.data) setUser(result.data);
+        if (!active) return;
+        if (result.success && result.data) {
+          setUser(result.data);
+          setAuthStatus('authenticated');
+        } else {
+          setUser(null);
+          setAuthStatus('unauthenticated');
+        }
       })
-      .catch(() => undefined)
-      .finally(() => {
-        if (active) setIsCheckingSession(false);
+      .catch(() => {
+        if (active) {
+          setUser(null);
+          setAuthStatus('unauthenticated');
+        }
       });
     return () => {
       active = false;
@@ -478,9 +489,15 @@ export default function App() {
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => undefined);
     setUser(null);
+    setAuthStatus('unauthenticated');
   };
 
-  if (isCheckingSession) return <div className="min-h-screen bg-slate-950" />;
-  if (!user) return <Login onLogin={setUser} />;
+  const handleLogin = (authenticatedUser: AuthUser) => {
+    setUser(authenticatedUser);
+    setAuthStatus('authenticated');
+  };
+
+  if (authStatus === 'checking') return <div className="min-h-screen bg-slate-950" />;
+  if (authStatus === 'unauthenticated' || !user) return <Login onLogin={handleLogin} />;
   return <DashboardApp user={user} onLogout={handleLogout} />;
 }
