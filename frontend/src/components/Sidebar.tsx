@@ -177,6 +177,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
           isCollapsed ? 'w-16' : 'w-64'
         } ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
       >
+        <div className={`hidden md:flex items-center border-b border-slate-800/90 ${isCollapsed ? 'justify-center p-3' : 'gap-3 px-4 py-4'}`}>
+          <div className="w-9 h-9 rounded-lg bg-red-600 flex items-center justify-center text-white shrink-0 shadow-sm shadow-red-950">
+            <ShieldAlert className="w-4 h-4" />
+          </div>
+          {!isCollapsed && (
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 whitespace-nowrap">
+                <span className="font-extrabold text-base tracking-wide font-mono text-white leading-tight">ResQ-Mind</span>
+                <span className="rounded border border-emerald-800/60 bg-slate-900 px-1.5 py-0.5 text-[8px] font-mono font-bold uppercase tracking-wide text-emerald-400">Simulated Live Data</span>
+              </div>
+              <span className="block truncate text-[10px] leading-tight text-slate-400 whitespace-nowrap">Real-Time Disaster Response Coordination</span>
+            </div>
+          )}
+        </div>
+
         {/* Mobile Header */}
         <div className="flex items-center justify-between p-4 border-b border-slate-800 md:hidden bg-slate-900/60">
           <div className="flex items-center gap-2">

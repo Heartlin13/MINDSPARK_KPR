@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ShieldAlert, 
   Menu, 
   RefreshCw,
   Play,
@@ -51,8 +50,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="bg-slate-950 border-b border-slate-800 text-slate-100 sticky top-0 z-30 select-none">
       <div className="max-w-7xl mx-auto w-full min-h-[74px] px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-6">
-        {/* Left: Branding strictly matching Section 1 & 3 */}
-        <div className="flex min-w-0 shrink items-center gap-3">
+        {/* Mobile navigation trigger */}
+        <div className="flex min-w-0 shrink items-center">
           {onToggleMobileSidebar && (
             <button
               onClick={onToggleMobileSidebar}
@@ -63,23 +62,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center text-white shrink-0 shadow-sm shadow-red-950">
-            <ShieldAlert className="w-4 h-4" />
-          </div>
-
-          <div className="min-w-0 flex flex-col justify-center">
-            <div className="flex items-center gap-2 whitespace-nowrap">
-              <span className="font-extrabold text-base tracking-wide font-mono text-white leading-tight">
-                ResQ-Mind
-              </span>
-              <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-slate-900 text-emerald-400 border border-emerald-800/60 uppercase">
-                Simulated Live Data
-              </span>
-            </div>
-            <span className="block truncate text-[11px] leading-tight text-slate-400 whitespace-nowrap">
-              Real-Time Disaster Response Coordination
-            </span>
-          </div>
         </div>
 
         {/* Right side: Live System Status, Gemini AI, Clock & Primary Actions */}
