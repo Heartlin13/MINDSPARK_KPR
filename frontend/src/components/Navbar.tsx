@@ -11,7 +11,7 @@ import {
   UserRound
 } from 'lucide-react';
 import { GeminiStatusInfo, SystemExecutionState } from '../types/disaster';
-import { AuthUser } from './LoginPage';
+import { AuthUser } from '../pages/Login';
 
 interface NavbarProps {
   state: SystemExecutionState | null;

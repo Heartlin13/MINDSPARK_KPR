@@ -16,7 +16,7 @@ import { ResponseHistoryView } from './components/ResponseHistoryView';
 import { ArchitectureView } from './components/ArchitectureView';
 import { ReportsView } from './components/ReportsView';
 import { SettingsView } from './components/SettingsView';
-import { AuthUser, LoginPage } from './components/LoginPage';
+import { AuthUser, Login } from './pages/Login';
 import { AgentRole, GeminiStatusInfo, SatelliteMonitoring, SystemExecutionState } from './types/disaster';
 import { INITIAL_DEFAULT_STATE } from './utils/defaultState';
 import { CheckCircle2, AlertTriangle, X } from 'lucide-react';
@@ -481,6 +481,6 @@ export default function App() {
   };
 
   if (isCheckingSession) return <div className="min-h-screen bg-slate-950" />;
-  if (!user) return <LoginPage onLogin={setUser} />;
+  if (!user) return <Login onLogin={setUser} />;
   return <DashboardApp user={user} onLogout={handleLogout} />;
 }
